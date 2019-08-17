@@ -22,7 +22,12 @@ class PropertyController {
   async index ({ request, response, view }) {
     const { latitude, longitude } = request.all()
 
+    /**
+     * Veja que faço o uso do .with que realiza um processo de Eager Loading
+     * nas imagens adicionando-as ao retorno de cada imóvel.
+     */
     const properties = Property.query()
+      .with('images')
       .nearBy(latitude, longitude, 10)
       .fetch()
 
@@ -49,7 +54,19 @@ class PropertyController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async store ({ request, response }) {
+  async store ({ auth, request, response }) {
+    const { id } = auth.user
+    const data = request.only([
+      'title',
+      'address',
+      'latitude',
+      'longitude',
+      'price'
+    ])
+
+    const property = await Property.create({ ...data, user_id: id })
+
+    return property
   }
 
   /**
@@ -89,7 +106,22 @@ class PropertyController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async update ({ params, request, response }) {
+  async update({ params, request, response }) {
+    const property = await Property.findOrFail(params.id)
+
+    const data = request.only([
+      'title',
+      'address',
+      'latitude',
+      'longitude',
+      'price'
+    ])
+
+    property.merge(data)
+
+    await property.save()
+
+    return property
   }
 
   /**
